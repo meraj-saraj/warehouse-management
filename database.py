@@ -1,15 +1,31 @@
 import sqlite3
 
 class Database:
-  def init(self,file_name="database.db"):
+  def init(self,file_name:str = "database.db")->None:
+    """
+    Manage Database.
+
+    Args:
+      file_name: The name of the file.
+
+    Returns:
+      None
+    """
     self.file_name=file_name
     self.connection = sqlite3.connect(self.file_name)
-    self.cursor = self.connection.cursor()
-    self.cursor.execute("PRAGMA foreign_keys = ON")
+    cursor = self.connection.cursor()
+    cursor.execute("PRAGMA foreign_keys = ON")
     self.create_tables()
 
-  def create_tables(self):
-    self.cursor.execute("""
+  def create_tables(self)-> None:
+    """
+    Create database tables.
+
+    Returns:
+      None
+    """
+    cursor = self.connection.cursor()
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS products(
     product_id INTEGER PRIMARY KEY AUTOINCREMENT,
    product_name TEXT NOT NULL,
@@ -19,14 +35,14 @@ class Database:
    description TEXT
     )
     """)
-    self.cursor.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS warehouses(
     warehouse_id INTEGER PRIMARY KEY AUTOINCREMENT,
     warehouse_name TEXT NOT NULL,
     location TEXT NOT NULL
     )
     """)
-    self.cursor.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS suppliers(
     supplier_id INTEGER PRIMARY KEY AUTOINCREMENT,
     supplier_name TEXT NOT NULL,
@@ -34,7 +50,7 @@ class Database:
     email TEXT NOT NULL UNIQUE
     )
     """)
-    self.cursor.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS transactions(
     transaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL,
@@ -55,5 +71,5 @@ class Database:
 
 
 
-db=Database(":memory:")
+database = Database(":memory:")
 print("Created tables is successfully.")
