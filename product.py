@@ -1,6 +1,6 @@
+
 class Product:
     """Represent a single product in the warehouse inventory."""
-
     def __init__(
         self,
         product_name: str,
@@ -9,7 +9,7 @@ class Product:
         minimum_stock: int,
         description: str | None = None,
         product_id: int | None = None,
-    ) -> None:
+    )->None:
         """
         Initialize a product object.
 
@@ -20,7 +20,6 @@ class Product:
             minimum_stock: The product minimum_stock.
             description: The product description.
             product_id: Unique product ID.
-
         """
         self.product_id = product_id
         self.product_name = product_name
@@ -35,6 +34,4 @@ class Product:
             f"sku = {self.sku!r},price = {self.price!r},minimum_stock = {self.minimum_stock!r},"
             f"description = {self.description!r})"
         )
-
-
 
