@@ -1,5 +1,6 @@
 import sqlite3
 from product import Product
+from warehouse import Warehouse
 
 
 class Database:
@@ -77,6 +78,8 @@ class Database:
 
         Args:
           product: A Product object.
+        Returns:
+          True if product was added; otherwise, False.
         """
         try:
             cursor = self.connection.cursor()
@@ -128,6 +131,22 @@ class Database:
         )
         return product
 
+    def rows_to_objects(self, rows: list[tuple], row_to_object) -> list[object]:
+        """
+        Convert a list of database rows into a list of objects.
+
+        Args:
+          rows: A list of tuples fetched from the database.
+          row_to_object: A function that converts a single row into an object.
+
+        Returns:
+          A list of objects built from the rows.
+        """
+        objects = []
+        for row in rows:
+            objects.append(row_to_object(row))
+        return objects
+
     def find_product(self, product_id: int) -> Product | None:
         """
         Find and return specifice product by ID.
@@ -155,17 +174,13 @@ class Database:
         Returns:
           A list of Product objects.
         """
-        products = []
         cursor = self.connection.cursor()
         cursor.execute(
             """SELECT product_id,product_name,sku,price,minimum_stock,description FROM products"""
         )
 
         rows = cursor.fetchall()
-        for row in rows:
-            product = self.row_to_product(row)
-            products.append(product)
-        return products
+        return self.rows_to_objects(rows, self.row_to_product)
 
     def commit_if_affected(self, rowcount: int) -> bool:
         """
@@ -331,6 +346,153 @@ class Database:
         cursor.execute(
             """DELETE FROM products WHERE product_id = ?""",
             (product_id,),
+        )
+        rowcount = cursor.rowcount
+        return self.commit_if_affected(rowcount)
+
+    def add_warehouse(self, warehouse: Warehouse) -> bool:
+        """
+        Add a warehouse to warehouses table.
+
+        Args:
+          warehouse: A Warehouse object.
+
+        Returns:
+          True if warehouse was added; otherwise, False.
+        """
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(
+                """
+    INSERT INTO warehouses(
+    warehouse_name,location
+    )
+    VALUES(?,?)
+    """,
+                (warehouse.warehouse_name, warehouse.location),
+            )
+            self.connection.commit()
+            warehouse.warehouse_id = cursor.lastrowid
+            return True
+        except sqlite3.Error as e:
+            print(f"Error: {e}")
+            return False
+
+    def row_to_warehouse(self, row: tuple) -> Warehouse:
+        """
+        Create a Warehouse object.
+
+        Args:
+          row: A tuple from columns of warehouses table.
+
+        Returns:
+          A Warehouse object.
+        """
+        warehouse_id = row[0]
+        warehouse_name = row[1]
+        location = row[2]
+        warehouse = Warehouse(
+            warehouse_id=warehouse_id, warehouse_name=warehouse_name, location=location
+        )
+        return warehouse
+
+    def find_warehouse(self, warehouse_id: int) -> Warehouse | None:
+        """
+        Find and return specifice warehouse by ID.
+
+        Args:
+          warehouse_id: The warehouse ID.
+
+        Returns:
+          A Warehouse object if found;otherwise, None.
+        """
+        cursor = self.connection.cursor()
+        cursor.execute(
+            """SELECT warehouse_id,warehouse_name,location FROM warehouses WHERE warehouse_id = ?""",
+            (warehouse_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return self.row_to_warehouse(row)
+
+    def get_all_warehouses(self) -> list[Warehouse]:
+        """
+        Get all warehouses in warehouses table.
+
+        Returns:
+          A list of Warehouse object.
+        """
+
+        cursor = self.connection.cursor()
+        cursor.execute(
+            """SELECT warehouse_id,warehouse_name,location FROM warehouses"""
+        )
+        rows = cursor.fetchall()
+        return self.rows_to_objects(rows, self.row_to_warehouse)
+
+    def edit_warehouse_name(self, warehouse_id: int, warehouse_new_name: str) -> bool:
+        """
+        Edit the warehouse name.
+
+        Args:
+          warehouse_id: The warehouse ID.
+          warehouse_new_name: The warehouse new name.
+
+        Raises:
+          ValueError: If warehouse_new_name is None.
+
+        Returns:
+          True if warehouse name was edited; otherwise, False.
+        """
+        warehouse_new_name = self.value_not_none(warehouse_new_name, "warehouse name")
+        cursor = self.connection.cursor()
+        cursor.execute(
+            """UPDATE warehouses SET warehouse_name = ? WHERE warehouse_id = ?""",
+            (warehouse_new_name, warehouse_id),
+        )
+        rowcount = cursor.rowcount
+        return self.commit_if_affected(rowcount)
+
+    def edit_location(self, warehouse_id: int, new_location: str) -> bool:
+        """
+        Edit the warehouse location.
+
+        Args:
+          warehouse_id: The warehouse ID.
+          new_location: The warehouse new location.
+
+        Raises:
+          ValueError: If warehouse_new_location is None.
+
+        Returns:
+          True if location was edited; otherwise, False.
+        """
+        new_location = self.value_not_none(new_location, "location")
+        cursor = self.connection.cursor()
+        cursor.execute(
+            """UPDATE warehouses SET location = ? WHERE warehouse_id = ?""",
+            (new_location, warehouse_id),
+        )
+        rowcount = cursor.rowcount
+        return self.commit_if_affected(rowcount)
+
+    def remove_warehouse(self, warehouse_id: int) -> bool:
+        """
+        Remove a warehouse from warehouses table.
+
+        Args:
+          warehouse_id: The warehouse ID.
+
+        Raises:
+          sqlite3.IntegrityError: If the warehouse has related transactions and therefore cannot be deleted.
+
+        Returns:
+          True if warehouse was removed; otherwise, False.
+        """
+        cursor = self.connection.cursor()
+        cursor.execute(
+            """DELETE FROM warehouses WHERE warehouse_id = ?""", (warehouse_id,)
         )
         rowcount = cursor.rowcount
         return self.commit_if_affected(rowcount)
