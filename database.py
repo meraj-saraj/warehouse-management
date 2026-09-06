@@ -4,7 +4,7 @@ from warehouse import Warehouse
 
 
 class Database:
-    def init(self, file_name: str = "database.db") -> None:
+    def __init__(self, file_name: str = "database.db") -> None:
         """
         Manage Database.
 
