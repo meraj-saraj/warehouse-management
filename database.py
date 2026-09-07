@@ -1,6 +1,7 @@
 import sqlite3
 from product import Product
 from warehouse import Warehouse
+from supplier import Supplier
 
 
 class Database:
@@ -494,5 +495,173 @@ class Database:
         cursor.execute(
             """DELETE FROM warehouses WHERE warehouse_id = ?""", (warehouse_id,)
         )
+        rowcount = cursor.rowcount
+        return self.commit_if_affected(rowcount)
+
+    def add_supplier(self, supplier: Supplier) -> bool:
+        """
+        Add a supplier to suppliers table.
+
+        Args:
+          supplier: A supplier object.
+
+        Returns:
+          True if supplier was added; otherwise, False.
+        """
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(
+                """INSERT INTO suppliers(
+                supplier_name,phone_number,email)VALUES (?,?,?)""",
+                (supplier.supplier_name, supplier.phone_number, supplier.email),
+            )
+            self.connection.commit()
+            supplier.supplier_id = cursor.lastrowid
+            return True
+        except sqlite3.Error as e:
+            print(f"Error: {e}")
+            return False
+
+    def row_to_supplier(self, row: tuple) -> Supplier:
+        """
+        Create a Supplier object.
+
+        Args:
+          row: A tuple from columns of supplier table.
+
+        Returns:
+          A Supplier object.
+        """
+        supplier_id = row[0]
+        supplier_name = row[1]
+        phone_number = row[2]
+        email = row[3]
+        supplier = Supplier(
+            supplier_id=supplier_id,
+            supplier_name=supplier_name,
+            phone_number=phone_number,
+            email=email,
+        )
+        return supplier
+
+    def find_supplier(self, supplier_id: int) -> Supplier | None:
+        """
+        Find and return specifice supplier by ID.
+
+        Args:
+          supplier_id: The supplier ID.
+
+        Returns:
+          A supplier object if found; otherwise, None.
+        """
+        cursor = self.connection.cursor()
+        cursor.execute(
+            """SELECT supplier_id,supplier_name,phone_number,email FROM suppliers WHERE supplier_id = ?""",
+            (supplier_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+        return self.row_to_supplier(row)
+
+    def get_all_suppliers(self) -> list[Supplier]:
+        """
+        Get all suppliers in suppliers table.
+
+        Returns:
+          A list of Supplier object.
+        """
+        cursor = self.connection.cursor()
+        cursor.execute(
+            """SELECT supplier_id,supplier_name,phone_number,email FROM suppliers"""
+        )
+        rows = cursor.fetchall()
+        return self.rows_to_objects(rows, self.row_to_supplier)
+
+    def edit_supplier_name(self, supplier_id: int, supplier_new_name: str) -> bool:
+        """
+        Edit the supplier name.
+
+        Args:
+          supplier_id: The supplier ID.
+          supplier_new_name: The supplier new name.
+
+        Raises:
+          ValueError: If supplier_new_name is None.
+
+        Returns:
+          True if supplier_name was edited; otherwise, False.
+        """
+        supplier_new_name = self.value_not_none(supplier_new_name, "supplier_name")
+        cursor = self.connection.cursor()
+        cursor.execute(
+            """UPDATE suppliers SET supplier_name = ? WHERE supplier_id = ?""",
+            (supplier_new_name,supplier_id,),
+        )
+        rowcount = cursor.rowcount
+        return self.commit_if_affected(rowcount)
+
+    def edit_phone_number(self, supplier_id: int, new_phone_number: str) -> bool:
+        """
+        Edit the supplier phone number.
+
+        Args:
+          supplier_id: The supplier ID.
+          new_phone_number: The supplier new phone number.
+
+        Raises:
+          ValueError: If new_phone_number is None.
+          sqlite3.IntegrityError: If new_phone_number already exists for another supplier.
+
+        Returns:
+          True if phone_number was edited; otherwise, False.
+        """
+        new_phone_number = self.value_not_none(new_phone_number, "phone_number")
+        cursor = self.connection.cursor()
+        cursor.execute(
+            """UPDATE suppliers SET phone_number = ? WHERE supplier_id = ?""",
+            (new_phone_number,supplier_id,),
+        )
+        rowcount = cursor.rowcount
+        return self.commit_if_affected(rowcount)
+
+    def edit_email(self, supplier_id: int, new_email: str) -> bool:
+        """
+        Edit the supplier email.
+
+        Args:
+          supplier_id: The supplier ID.
+          new_email: The supplier new email.
+
+        Raises:
+          ValueError: If new_email is None.
+          sqlite3.IntegrityError: If new_email already exists for another supplier.
+
+        Returns:
+          True if email was edited; otherwise, False.
+        """
+        new_email = self.value_not_none(new_email, "email")
+        cursor = self.connection.cursor()
+        cursor.execute(
+            """UPDATE suppliers SET email = ? WHERE supplier_id = ?""", (new_email,supplier_id,)
+        )
+        rowcount = cursor.rowcount
+        return self.commit_if_affected(rowcount)
+    
+    def remove_supplier(self,supplier_id:int)->bool:
+        """
+        Remove a supplier by ID.
+
+        Args:
+          supplier_id: The supplier ID.
+
+        Raises:
+          sqlite3.IntegrityError: If the supplier has related transactions and therefore cannot be deleted.
+
+        Returns:
+          True if supplier was removed; otherwise, False.
+        """
+        cursor = self.connection.cursor()
+        cursor.execute("""DELETE FROM suppliers WHERE supplier_id = ?""",(supplier_id,))
         rowcount = cursor.rowcount
         return self.commit_if_affected(rowcount)
